@@ -1,7 +1,8 @@
+use std::collections::HashSet;
+
 use crate::input::input::InputParser;
 
-pub fn solve_problem_04a(input: Vec<String>) -> u32 {
-    let guesses = &input[0];
+fn parse_boards(input: Vec<String>) -> Vec<BingoBoard> {
 
     let board_row_strings: Vec<Vec<String>> = InputParser::chunk(
         input[1..].into_iter().map(|x| x.to_string()).collect(),
@@ -16,15 +17,22 @@ pub fn solve_problem_04a(input: Vec<String>) -> u32 {
         boards.push(board);
     }
 
+    return boards;
+}
+
+pub fn solve_problem_04a(input: Vec<String>) -> u32 {
+    let guesses = &input[0];
+    let mut boards = parse_boards(input.clone());
+
     for guess in guesses.split(",") {
         let guess_value = guess.parse::<u32>().unwrap();
         let mut board_n = 0;
         for board in &mut boards {
             board.mark(guess_value);
-            let bingo_sum = board.get_bingo_sum();
-            if bingo_sum > 0 {
+            if board.get_bingo_sum() > 0 {
+                let unmarked_number_sum = board.get_unmarked_number_sum();
                 println!("Bingo on board {} after guess {}!", board_n, guess_value);
-                let answer = bingo_sum * guess_value;
+                let answer = unmarked_number_sum * guess_value;
                 return answer;
             }
             board_n += 1;
@@ -33,10 +41,35 @@ pub fn solve_problem_04a(input: Vec<String>) -> u32 {
     panic!("Reached the end of the file without bingo!");
 }
 
-fn solve_problem_04b(input: Vec<String>) -> usize {
-    unimplemented!();
+fn solve_problem_04b(input: Vec<String>) -> u32 {
+
+    let guesses = &input[0];
+    let mut boards = parse_boards(input.clone());
+    let mut last_winning_board = None;
+    let mut last_winning_guess = None;
+    let mut already_won: HashSet<u32> = HashSet::new();
+    for guess in guesses.split(",") {
+        let guess_value = guess.parse::<u32>().unwrap();
+        let mut board_n = 0;
+        for board in &mut boards {
+            board.mark(guess_value);
+            if !already_won.contains(&board_n) && board.get_bingo_sum() > 0 {
+                last_winning_board = Some(board.clone());
+                last_winning_guess = Some(guess_value);
+                already_won.insert(board_n);
+            }
+            board_n += 1;
+        }
+    }
+    let last_winning_board = last_winning_board.unwrap();
+    let last_winning_guess = last_winning_guess.unwrap();
+    let unmarked_number_sum = last_winning_board.get_unmarked_number_sum();
+    println!("Last bingo on board {:?} after guess {}!", last_winning_board, last_winning_guess);
+    let answer = unmarked_number_sum * last_winning_guess;
+    return answer;
 }
 
+#[derive(Debug, Clone)]
 struct BingoBoard {
     rows: Vec<Vec<u32>>,
     marked: Vec<Vec<bool>>,
@@ -113,8 +146,20 @@ impl BingoBoard {
         marked_diagonals
     }
 
+    pub fn sum(&self) -> u32 {
+        self.rows.iter().flatten().sum()
+    }
+
     pub fn get_bingo_sum(&self) -> u32 {
         self.get_bingo_sum_row() + self.get_bingo_sum_column()
+    }
+
+    pub fn get_marked_number_sum(&self) -> u32 {
+        self.rows.iter().flatten().zip(self.marked.iter().flatten()).filter(|(_, marked)| **marked).map(|(number, _)| *number).sum()
+    }
+    
+    pub fn get_unmarked_number_sum(&self) -> u32 {
+        self.sum() - self.get_marked_number_sum()
     }
 
     pub fn get_bingo_sum_row(&self) -> u32 {
@@ -149,6 +194,11 @@ impl BingoBoard {
     
 }
 
+enum BingoType {
+    Row(usize),
+    Column(usize)
+}
+
 #[cfg(test)]
 mod test_problem_04 {
 
@@ -160,15 +210,12 @@ mod test_problem_04 {
         let input = InputParser::new().parse_as_string("input_04.txt").unwrap();
 
         let answer = solve_problem_04a(input);
-        assert_eq!(answer, 0); // 31584 is wrong
+        assert_eq!(answer, 87456); // 31584 is wrong
     }
     
     #[test]
     fn test_problem_04b_passes() {
         let input = InputParser::new().parse_as_string("input_04.txt").unwrap();
-        let shorted_input = input.iter().take(10).map(|i| i.clone()).collect();
-
-        assert_eq!(solve_problem_04b(shorted_input), 0);
 
         let answer = solve_problem_04b(input);
         assert_eq!(answer, 0);
@@ -214,7 +261,9 @@ mod test_problem_04 {
         board.mark(20);
         board.mark(25);
         assert_eq!(board.get_bingo_sum(), 75);
-
+        board.mark(7);
+        assert_eq!(board.get_bingo_sum(), 75);
+        
     }
 
 }
