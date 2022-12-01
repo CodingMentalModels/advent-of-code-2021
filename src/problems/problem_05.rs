@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::input::input::InputParser;
 
@@ -86,7 +86,7 @@ impl LineSegment {
         (self.start.0 as i32 - self.end.0 as i32).abs() == (self.start.1 as i32 - self.end.1 as i32).abs()
     }
 
-    pub fn get_points(&self) -> Vec<(u32, u32)> {
+    pub fn get_points(&self) -> HashSet<(u32, u32)> {
         let mut points = vec![];
         if self.is_horizontal() {
             let start = self.start.0.min(self.end.0);
@@ -105,7 +105,7 @@ impl LineSegment {
             assert!(slope == 1 || slope == -1);
             if slope == 1 {
                 let start = (self.start.0.min(self.end.0), self.start.1.min(self.end.1));
-                for i in 0..self.l1_norm() {
+                for i in 0..self.l1_norm() + 1 {
                     points.push((start.0 + i as u32, start.1 + i as u32));
                 }
             } else {
@@ -114,14 +114,14 @@ impl LineSegment {
                 } else {
                     (self.end, self.start)
                 };
-                for i in 0..self.l1_norm() {
+                for i in 0..self.l1_norm() + 1 {
                     points.push((start.0 + i as u32, start.1 - i as u32));
                 }
             }
         } else {
             panic!("Line segment is neither horizontal, vertical, nor diagonal");
         }
-        points
+        points.into_iter().collect()
     }
 
 }
@@ -175,6 +175,37 @@ fn test_get_points() {
         (0, 10),
         (1, 11),
         (2, 12)
-        ]
-    )
+        ].into_iter().collect()
+    );
+
+    let line = LineSegment::new((2, 12), (0, 10));
+    assert!(line.is_diagonal());
+    assert_eq!(line.get_points(), vec![
+        (0, 10),
+        (1, 11),
+        (2, 12)
+        ].into_iter().collect()
+    );
+
+    let line = LineSegment::new((10, 12), (14, 8));
+    assert!(line.is_diagonal());
+    assert_eq!(line.get_points(), vec![
+        (10, 12),
+        (11, 11),
+        (12, 10),
+        (13, 9),
+        (14, 8),
+        ].into_iter().collect()
+    );
+    
+    let line = LineSegment::new((14, 8), (10, 12));
+    assert!(line.is_diagonal());
+    assert_eq!(line.get_points(), vec![
+        (10, 12),
+        (11, 11),
+        (12, 10),
+        (13, 9),
+        (14, 8),
+        ].into_iter().collect()
+    );
 }
