@@ -69,6 +69,11 @@ impl LineSegment {
         Ok(vec![x, y])
     }
 
+    pub fn l1_norm(&self) -> usize {
+        let l_x = (self.start.0 as i32 - self.end.0 as i32).abs() as usize;
+        let l_y = (self.start.1 as i32 - self.end.1 as i32).abs() as usize;
+        return l_x.max(l_y);
+    }
     pub fn is_horizontal(&self) -> bool {
         self.start.1 == self.end.1
     }
@@ -78,7 +83,7 @@ impl LineSegment {
     }
 
     pub fn is_diagonal(&self) -> bool {
-        (self.start.0 as i32 - self.end.0 as i32).abs() == (self.start.1 as i32 - self.end.1 as i32)
+        (self.start.0 as i32 - self.end.0 as i32).abs() == (self.start.1 as i32 - self.end.1 as i32).abs()
     }
 
     pub fn get_points(&self) -> Vec<(u32, u32)> {
@@ -100,9 +105,8 @@ impl LineSegment {
             assert!(slope == 1 || slope == -1);
             if slope == 1 {
                 let start = (self.start.0.min(self.end.0), self.start.1.min(self.end.1));
-                let length = (self.start.0 as i32 - self.start.1 as i32).abs() as u32 + 1;
-                for i in 0..length {
-                    points.push((start.0 + i, start.1 + i));
+                for i in 0..self.l1_norm() {
+                    points.push((start.0 + i as u32, start.1 + i as u32));
                 }
             } else {
                 let (start, _end) = if self.start.0 < self.end.0 {
@@ -110,8 +114,8 @@ impl LineSegment {
                 } else {
                     (self.end, self.start)
                 };
-                for i in 0..((self.end.0 - self.start.0) + 1) {
-                    points.push((start.0 + i, start.1 - i));
+                for i in 0..self.l1_norm() {
+                    points.push((start.0 + i as u32, start.1 - i as u32));
                 }
             }
         } else {
@@ -143,10 +147,10 @@ mod test_problem_05 {
         let input = InputParser::new().parse_as_string("input_05.txt").unwrap();
         let shorted_input = input.iter().take(10).map(|i| i.clone()).collect();
 
-        assert_eq!(solve_problem_05b(shorted_input), 0);
+        assert_eq!(solve_problem_05b(shorted_input), 6);
 
         let answer = solve_problem_05b(input);
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 10157);
     }
 
     #[test]
@@ -160,4 +164,17 @@ mod test_problem_05 {
         assert_eq!(a, c);
 
     }
+}
+
+#[test]
+fn test_get_points() {
+    
+    let line = LineSegment::new((0, 10), (2, 12));
+    assert!(line.is_diagonal());
+    assert_eq!(line.get_points(), vec![
+        (0, 10),
+        (1, 11),
+        (2, 12)
+        ]
+    )
 }
